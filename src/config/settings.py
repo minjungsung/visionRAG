@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 
+
 class Settings(BaseSettings):
     # Milvus
     milvus_host: str = "localhost"
@@ -9,6 +10,7 @@ class Settings(BaseSettings):
 
     # Triton
     triton_url: str = "localhost:8001"
+    use_triton: bool = False
 
     # MinIO
     minio_endpoint: str = "localhost:9000"
@@ -26,7 +28,18 @@ class Settings(BaseSettings):
     text_embed_dim: int = 1024
     image_embed_dim: int = 1152
 
+    # LangSmith
+    langsmith_api_key: str = ""
+    langsmith_project: str = "visionrag"
+    langsmith_tracing: bool = False
+
+    # ClearML
+    clearml_api_host: str = "http://localhost:8081"
+    clearml_web_host: str = "http://localhost:8008"
+    clearml_files_host: str = "http://localhost:8082"
+
     class Config:
         env_file = ".env"
+
 
 settings = Settings()

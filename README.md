@@ -2,29 +2,104 @@
 
 멀티모달 지식 관리 시스템 — 텍스트 + 이미지 통합 검색 및 AI 답변 생성
 
+## 아키텍처
+
+```
+┌─────────────┐    ┌──────────┐    ┌────────────┐
+│  FastAPI    │───▶│  Milvus  │    │   Triton   │
+│  + Metrics  │    │(Vector DB)│    │(GPU Serving)│
+└──────┬──────┘    └──────────┘    └────────────┘
+       │
+       │  traces           experiments        data versions
+       ▼                   ▼                   ▼
+┌──────────────┐   ┌──────────────┐   ┌──────────────┐
+│  LangSmith   │   │   ClearML    │   │  DVC + MinIO │
+│  (Observ.)   │   │  (Tracking)  │   │ (Versioning) │
+└──────────────┘   └──────────────┘   └──────────────┘
+       │
+       ▼
+┌──────────────┐   ┌──────────────┐   ┌──────────────┐
+│  Prometheus  │──▶│   Grafana    │   │  Deepchecks  │
+│  (Metrics)   │   │ (Dashboard)  │   │ (Validation) │
+└──────────────┘   └──────────────┘   └──────────────┘
+```
+
 ## 스택
 
-- **Backend**: FastAPI
-- **Vector DB**: Milvus
-- **Model Serving**: NVIDIA Triton Inference Server
-- **Storage**: MinIO (S3 호환)
-- **Task Queue**: Celery + Redis
-- **Models**: BGE-M3 (텍스트 임베딩), SigLIP (이미지 임베딩), BGE-Reranker, Qwen2-VL
+| 영역 | 도구 |
+|------|------|
+| Backend | FastAPI |
+| Vector DB | Milvus |
+| Model Serving | NVIDIA Triton Inference Server |
+| Storage | MinIO (S3 호환) |
+| Task Queue | Celery + Redis |
+| Models | BGE-M3, SigLIP, BGE-Reranker, Qwen2-VL |
+| LLM Observability | LangSmith |
+| Experiment Tracking | ClearML |
+| Data Versioning | DVC (MinIO remote) |
+| Monitoring | Prometheus + Grafana |
+| Data Validation | Deepchecks |
+| CI/CD | GitHub Actions |
 
 ## 실행
 
 ```bash
-# 1. 인프라
+# 1. 인프라 (DB, Storage, Queue)
 docker compose up -d milvus minio redis
 
-# 2. Triton (GPU 필요)
+# 2. MLOps 인프라
+docker compose up -d clearml-server prometheus grafana
+
+# 3. Triton (GPU 필요)
 docker compose up -d triton
 
-# 3. API 서버
+# 4. API 서버
 uvicorn src.api.main:app --reload --port 8080
 
-# 4. 헬스체크
+# 5. 헬스체크
 curl http://localhost:8080/health
+```
+
+## MLOps 설정
+
+### LangSmith
+
+`.env`에 추가:
+```env
+LANGSMITH_API_KEY=your-key
+LANGSMITH_TRACING=true
+LANGSMITH_PROJECT=visionrag
+```
+
+### ClearML
+
+```bash
+docker compose up -d clearml-server
+# Web UI: http://localhost:8008
+```
+
+### DVC
+
+```bash
+pip install -e ".[mlops]"
+dvc pull              # 데이터 다운로드
+dvc repro             # 파이프라인 실행
+dvc push              # 결과물 업로드
+```
+
+### Monitoring
+
+- Prometheus: http://localhost:9090
+- Grafana: http://localhost:3000 (admin/admin)
+- FastAPI Metrics: http://localhost:8080/metrics
+
+### Data Validation
+
+```python
+from src.mlops.validation import validate_embeddings, check_data_drift
+
+result = validate_embeddings(embeddings)
+drift = check_data_drift(ref_embeddings, cur_embeddings)
 ```
 
 ## 개발 환경
@@ -32,5 +107,28 @@ curl http://localhost:8080/health
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -e ".[dev]"
+pip install -e ".[dev,mlops]"
+```
+
+## 프로젝트 구조
+
+```
+src/
+├── api/            # FastAPI 엔드포인트
+├── config/         # 설정 (pydantic-settings)
+├── ingestion/      # 문서 수집 파이프라인
+├── models/         # Triton model repository
+├── mlops/          # MLOps 통합 코드
+│   ├── __init__.py          # LangSmith tracing
+│   ├── clearml_tracking.py  # 실험 추적
+│   ├── metrics.py           # Prometheus 메트릭
+│   └── validation.py        # Deepchecks 검증
+└── retrieval/      # 검색 + RAG 파이프라인
+monitoring/
+├── prometheus.yml
+└── grafana/
+    ├── dashboards/
+    └── provisioning/
+.dvc/               # DVC 설정
+.github/workflows/  # CI/CD
 ```

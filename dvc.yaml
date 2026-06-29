@@ -1,0 +1,23 @@
+stages:
+  prepare_data:
+    cmd: python scripts/prepare_data.py
+    deps:
+      - scripts/prepare_data.py
+      - data/raw
+    outs:
+      - data/processed
+    metrics:
+      - data/metrics.json:
+          cache: false
+
+  evaluate_retrieval:
+    cmd: python scripts/evaluate_retrieval.py
+    deps:
+      - scripts/evaluate_retrieval.py
+      - data/processed
+    metrics:
+      - reports/retrieval_metrics.json:
+          cache: false
+    plots:
+      - reports/retrieval_plots.csv:
+          cache: false

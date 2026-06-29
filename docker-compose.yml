@@ -1,6 +1,7 @@
 services:
   milvus:
-    image: milvusdb/milvus:v2.4-latest
+    image: milvusdb/milvus:v2.4.17
+    command: ["milvus", "run", "standalone"]
     ports:
       - "19530:19530"
       - "9091:9091"
@@ -14,7 +15,7 @@ services:
     image: minio/minio:latest
     ports:
       - "9000:9000"
-      - "9001:9001"
+      - "9002:9001"
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: minioadmin
@@ -32,10 +33,10 @@ services:
     ports:
       - "8000:8000"   # HTTP
       - "8001:8001"   # gRPC
-      - "8002:8002"   # Metrics
+      - "8002:8002"   # Metrics (Prometheus format)
     volumes:
       - ./src/models/model_repository:/models
-    command: tritonserver --model-repository=/models
+    command: tritonserver --model-repository=/models --metrics-port=8002
     deploy:
       resources:
         reservations:
@@ -44,6 +45,48 @@ services:
               count: all
               capabilities: [gpu]
 
+  # --- MLOps: ClearML ---
+  clearml-server:
+    image: allegroai/clearml:latest
+    ports:
+      - "8008:8008"   # Web UI
+      - "8081:8081"   # API
+      - "8082:8082"   # File server
+    volumes:
+      - clearml_data:/opt/clearml/data
+      - clearml_logs:/opt/clearml/logs
+    environment:
+      CLEARML_HOST_IP: "localhost"
+
+  # --- MLOps: Prometheus ---
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=30d"
+
+  # --- MLOps: Grafana ---
+  grafana:
+    image: grafana/grafana:11.1.0
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+
 volumes:
   milvus_data:
   minio_data:
+  clearml_data:
+  clearml_logs:
+  grafana_data:
