@@ -132,3 +132,14 @@ monitoring/
 .dvc/               # DVC 설정
 .github/workflows/  # CI/CD
 ```
+
+## 문서
+
+| 문서 | 내용 |
+|------|------|
+| [docs/ROADMAP.md](docs/ROADMAP.md) | 프로젝트 TODO 및 기능 개발 로드맵 |
+| [docs/STUDY_GUIDE.md](docs/STUDY_GUIDE.md) | RAG/프롬프트엔지니어링/파인튜닝 학습 가이드 |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 시스템 아키텍처 및 설계 의사결정 |
+| [docs/PROGRESS.md](docs/PROGRESS.md) | 진행 상황 추적 |
+| [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md) | 실험 기록 |
+| [docs/NEXT_STEPS.md](docs/NEXT_STEPS.md) | 다음 구현 계획 (프롬프트 템플릿 + Query Rewriting + RAGAS) |
