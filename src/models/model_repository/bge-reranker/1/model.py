@@ -1,4 +1,5 @@
 """BGE-Reranker 리랭킹 모델."""
+
 import numpy as np
 import triton_python_backend_utils as pb_utils
 from sentence_transformers import CrossEncoder
@@ -19,7 +20,9 @@ class TritonPythonModel:
                 p.decode("utf-8")
                 for p in pb_utils.get_input_tensor_by_name(request, "passage").as_numpy().flatten()
             ]
-            scores = self.model.predict(list(zip(queries, passages))).astype(np.float32).reshape(-1, 1)
+            scores = (
+                self.model.predict(list(zip(queries, passages))).astype(np.float32).reshape(-1, 1)
+            )
             out = pb_utils.Tensor("score", scores)
             responses.append(pb_utils.InferenceResponse([out]))
         return responses

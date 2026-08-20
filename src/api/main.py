@@ -1,4 +1,5 @@
 """VisionRAG API 서버."""
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, File, UploadFile

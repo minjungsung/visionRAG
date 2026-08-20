@@ -42,6 +42,14 @@ mlops = [
 line-length = 100
 target-version = "py311"
 
+[tool.ruff.lint]
+ignore = ["BLE001"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["SIM117"]
+"scripts/prepare_data.py" = ["SIM115"]
+"src/api/main.py" = ["B008"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]

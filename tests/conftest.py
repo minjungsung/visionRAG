@@ -1,11 +1,12 @@
 """Test configuration and shared fixtures."""
+
 import sys
 from unittest.mock import MagicMock
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-pytest_plugins = ['pytest_asyncio']
+pytest_plugins = ["pytest_asyncio"]
 
 # ---------------------------------------------------------------------------
 # Pre-patch missing optional modules so that lazy imports in endpoint functions

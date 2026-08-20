@@ -1,4 +1,5 @@
 """Prometheus metrics for FastAPI."""
+
 import time
 
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, Info, generate_latest

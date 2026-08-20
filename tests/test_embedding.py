@@ -1,4 +1,5 @@
 """Embedding model tests including Triton/local fallback logic."""
+
 import sys
 from unittest.mock import MagicMock, patch
 
@@ -161,9 +162,7 @@ class TestTritonFallback:
         with patch("src.models.embedding.settings") as mock_settings:
             mock_settings.use_triton = True
 
-            with patch.object(
-                model, "_triton_encode_text", return_value=fake_triton_result
-            ):
+            with patch.object(model, "_triton_encode_text", return_value=fake_triton_result):
                 result = model.encode(["test"])
 
         assert np.array_equal(result, fake_triton_result)

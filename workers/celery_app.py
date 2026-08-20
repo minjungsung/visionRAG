@@ -1,4 +1,5 @@
 """Celery 앱 설정."""
+
 from celery import Celery
 
 from src.config.settings import settings

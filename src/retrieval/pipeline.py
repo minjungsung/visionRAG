@@ -1,4 +1,5 @@
 """벡터 검색 + 리랭킹 파이프라인 (텍스트 + 이미지 멀티모달)."""
+
 import numpy as np
 import tritonclient.grpc as grpcclient
 from pymilvus import Collection, connections
@@ -36,13 +37,15 @@ class RetrievalPipeline:
         results = []
         for idx, score in reranked[:top_k]:
             hit = text_results[0][idx]
-            results.append({
-                "text": candidates[idx],
-                "score": float(score),
-                "doc_id": hit.entity.get("doc_id"),
-                "page_num": hit.entity.get("page_num"),
-                "type": "text",
-            })
+            results.append(
+                {
+                    "text": candidates[idx],
+                    "score": float(score),
+                    "doc_id": hit.entity.get("doc_id"),
+                    "page_num": hit.entity.get("page_num"),
+                    "type": "text",
+                }
+            )
         return results
 
     def search_images(self, query: str, top_k: int = 10) -> list[dict]:
@@ -59,13 +62,15 @@ class RetrievalPipeline:
 
         results = []
         for hit in image_results[0]:
-            results.append({
-                "image_path": hit.entity.get("image_path"),
-                "score": float(hit.score),
-                "doc_id": hit.entity.get("doc_id"),
-                "caption": hit.entity.get("caption"),
-                "type": "image",
-            })
+            results.append(
+                {
+                    "image_path": hit.entity.get("image_path"),
+                    "score": float(hit.score),
+                    "doc_id": hit.entity.get("doc_id"),
+                    "caption": hit.entity.get("caption"),
+                    "type": "image",
+                }
+            )
         return results
 
     def search_multimodal(self, query: str, top_k: int = 10) -> list[dict]:

@@ -1,4 +1,5 @@
 """문서 인제스천 파이프라인: 파싱 → 임베딩 → Milvus 저장."""
+
 import base64
 import io
 import uuid
@@ -17,7 +18,10 @@ class IngestionPipeline:
     def __init__(self):
         self.triton = grpcclient.InferenceServerClient(url=settings.triton_url)
         self.minio = Minio(
-            settings.minio_endpoint, settings.minio_access_key, settings.minio_secret_key, secure=False
+            settings.minio_endpoint,
+            settings.minio_access_key,
+            settings.minio_secret_key,
+            secure=False,
         )
         connections.connect(host=settings.milvus_host, port=settings.milvus_port)
         self.text_col = Collection(settings.text_collection)
@@ -55,13 +59,15 @@ class IngestionPipeline:
         result = self.triton.infer("bge-m3", [input_tensor])
         embeddings = result.as_numpy("embedding")
 
-        self.text_col.insert([
-            [str(uuid.uuid4()) for _ in chunks],
-            [doc_id] * len(chunks),
-            chunks,
-            embeddings.tolist(),
-            [getattr(el.metadata, "page_number", 0) or 0 for el in elements],
-        ])
+        self.text_col.insert(
+            [
+                [str(uuid.uuid4()) for _ in chunks],
+                [doc_id] * len(chunks),
+                chunks,
+                embeddings.tolist(),
+                [getattr(el.metadata, "page_number", 0) or 0 for el in elements],
+            ]
+        )
 
     def _ingest_images(self, doc_id: str, elements):
         for el in elements:
@@ -70,13 +76,21 @@ class IngestionPipeline:
             pixel = np.array(img).transpose(2, 0, 1).astype(np.uint8)
 
             img_key = f"{doc_id}/images/{uuid.uuid4()}.png"
-            self.minio.put_object(settings.minio_bucket, img_key, io.BytesIO(img_bytes), len(img_bytes))
+            self.minio.put_object(
+                settings.minio_bucket, img_key, io.BytesIO(img_bytes), len(img_bytes)
+            )
 
             input_tensor = grpcclient.InferInput("image", [1, 3, 384, 384], "UINT8")
             input_tensor.set_data_from_numpy(pixel[np.newaxis, ...])
             result = self.triton.infer("siglip", [input_tensor])
             embedding = result.as_numpy("embedding")
 
-            self.image_col.insert([
-                [str(uuid.uuid4())], [doc_id], [img_key], embedding.tolist(), [""],
-            ])
+            self.image_col.insert(
+                [
+                    [str(uuid.uuid4())],
+                    [doc_id],
+                    [img_key],
+                    embedding.tolist(),
+                    [""],
+                ]
+            )
