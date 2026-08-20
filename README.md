@@ -137,6 +137,7 @@ monitoring/
 
 | 문서 | 내용 |
 |------|------|
+| [docs/USAGE.md](docs/USAGE.md) | **사용 가이드 (시작하기, UI, API, 평가 등)** |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | 프로젝트 TODO 및 기능 개발 로드맵 |
 | [docs/STUDY_GUIDE.md](docs/STUDY_GUIDE.md) | RAG/프롬프트엔지니어링/파인튜닝 학습 가이드 |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 시스템 아키텍처 및 설계 의사결정 |
