@@ -36,30 +36,44 @@ jobs:
     runs-on: ubuntu-latest
     needs: lint-and-test
     if: github.ref == 'refs/heads/main'
+    env:
+      HAS_MINIO_SECRET: ${{ secrets.MINIO_ACCESS_KEY != '' }}
     steps:
+      - name: Skip if no MinIO secrets
+        if: env.HAS_MINIO_SECRET != 'true'
+        run: |
+          echo "::notice::Skipping DVC repro — MINIO_ACCESS_KEY secret not configured"
+          exit 0
+
       - uses: actions/checkout@v4
+        if: env.HAS_MINIO_SECRET == 'true'
 
       - uses: actions/setup-python@v5
+        if: env.HAS_MINIO_SECRET == 'true'
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
 
       - name: Install dependencies
+        if: env.HAS_MINIO_SECRET == 'true'
         run: pip install -e ".[mlops]"
 
       - name: DVC pull
+        if: env.HAS_MINIO_SECRET == 'true'
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.MINIO_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.MINIO_SECRET_KEY }}
         run: dvc pull --allow-missing
 
       - name: DVC repro
+        if: env.HAS_MINIO_SECRET == 'true'
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.MINIO_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.MINIO_SECRET_KEY }}
         run: dvc repro
 
       - name: Upload metrics
+        if: env.HAS_MINIO_SECRET == 'true' && always()
         uses: actions/upload-artifact@v4
         with:
           name: metrics
