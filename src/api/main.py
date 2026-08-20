@@ -21,6 +21,7 @@ app.add_route("/metrics", metrics_endpoint)
 class QueryRequest(BaseModel):
     query: str
     top_k: int = 5
+    prompt_type: str | None = None
 
 
 @app.get("/health")
@@ -88,4 +89,4 @@ def query(req: QueryRequest):
     from src.retrieval.rag import RAGPipeline
 
     rag = RAGPipeline()
-    return rag.answer(req.query, top_k=req.top_k)
+    return rag.answer(req.query, top_k=req.top_k, query_type=req.prompt_type)

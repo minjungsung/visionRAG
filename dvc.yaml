@@ -21,3 +21,15 @@ stages:
     plots:
       - reports/retrieval_plots.csv:
           cache: false
+
+  evaluate_rag:
+    cmd: python scripts/evaluate_rag.py
+    deps:
+      - scripts/evaluate_rag.py
+      - data/golden_qa.jsonl
+    metrics:
+      - reports/rag_metrics.json:
+          cache: false
+    plots:
+      - reports/rag_per_query.csv:
+          cache: false

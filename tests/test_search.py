@@ -165,7 +165,7 @@ async def test_query_returns_answer_and_sources(client, mock_rag_module):
 async def test_query_passes_parameters(client, mock_rag_module):
     """POST /query passes query and top_k to RAGPipeline."""
     await client.post("/query", json={"query": "test query", "top_k": 3})
-    mock_rag_module.answer.assert_called_once_with("test query", top_k=3)
+    mock_rag_module.answer.assert_called_once_with("test query", top_k=3, query_type=None)
 
 
 @pytest.mark.asyncio
@@ -199,7 +199,7 @@ async def test_query_missing_query_returns_422(client):
 async def test_query_default_top_k(client, mock_rag_module):
     """POST /query uses default top_k=5 when not specified."""
     await client.post("/query", json={"query": "test"})
-    mock_rag_module.answer.assert_called_once_with("test", top_k=5)
+    mock_rag_module.answer.assert_called_once_with("test", top_k=5, query_type=None)
 
 
 @pytest.mark.asyncio

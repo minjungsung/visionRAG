@@ -38,6 +38,15 @@ class Settings(BaseSettings):
     langsmith_project: str = "visionrag"
     langsmith_tracing: bool = False
 
+    # Query Rewriting
+    rewrite_strategy: str = "none"  # none, simple, multi_query, hyde
+    rewrite_openai_api_key: str = ""
+    rewrite_llm_model: str = "gpt-4o-mini"
+
+    # OpenAI (RAG 답변 생성 fallback)
+    openai_api_key: str = ""
+    openai_model: str = "gpt-4o-mini"
+
     # ClearML
     clearml_api_host: str = "http://localhost:8081"
     clearml_web_host: str = "http://localhost:8008"

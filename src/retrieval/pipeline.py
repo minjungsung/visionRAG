@@ -1,10 +1,15 @@
 """벡터 검색 + 리랭킹 파이프라인 (텍스트 + 이미지 멀티모달)."""
 
+import logging
+
 import numpy as np
 import tritonclient.grpc as grpcclient
 from pymilvus import Collection, connections
 
 from src.config.settings import settings
+from src.retrieval.query_rewriter import QueryRewriter, RewriteStrategy
+
+logger = logging.getLogger(__name__)
 
 
 class RetrievalPipeline:
@@ -16,8 +21,31 @@ class RetrievalPipeline:
         self.text_col.load()
         self.image_col.load()
 
+        # Query rewriter 초기화
+        self._rewrite_strategy = RewriteStrategy(settings.rewrite_strategy)
+        self._rewriter = QueryRewriter(
+            openai_api_key=settings.rewrite_openai_api_key or None,
+            model=settings.rewrite_llm_model,
+        )
+
     def search(self, query: str, top_k: int = 10) -> list[dict]:
-        """텍스트 전용 검색 (기존 동작 유지)."""
+        """텍스트 전용 검색 (query rewriting 포함)."""
+        # Query rewriting 단계
+        if self._rewrite_strategy == RewriteStrategy.MULTI_QUERY:
+            return self._search_multi_query(query, top_k)
+        elif self._rewrite_strategy == RewriteStrategy.HYDE:
+            search_query = self._rewriter.hyde(query)
+            logger.debug(f"HyDE rewrite: '{query}' → '{search_query[:100]}...'")
+        elif self._rewrite_strategy == RewriteStrategy.SIMPLE:
+            search_query = self._rewriter.rewrite(query)
+            logger.debug(f"Simple rewrite: '{query}' → '{search_query}'")
+        else:
+            search_query = query
+
+        return self._search_single(search_query, top_k)
+
+    def _search_single(self, query: str, top_k: int = 10) -> list[dict]:
+        """단일 쿼리로 검색 (내부 핵심 로직)."""
         query_embedding = self._embed_query(query)
 
         text_results = self.text_col.search(
@@ -47,6 +75,24 @@ class RetrievalPipeline:
                 }
             )
         return results
+
+    def _search_multi_query(self, query: str, top_k: int = 10) -> list[dict]:
+        """Multi-query: 여러 변형 쿼리로 검색 후 결과 병합."""
+        expanded_queries = self._rewriter.expand(query, n=3)
+        logger.debug(f"Multi-query expansion: {expanded_queries}")
+
+        # 각 변형 쿼리로 검색
+        all_results: dict[str, dict] = {}  # text → result dict (중복 제거용)
+        for q in expanded_queries:
+            results = self._search_single(q, top_k=top_k)
+            for r in results:
+                key = r["text"]
+                if key not in all_results or r["score"] > all_results[key]["score"]:
+                    all_results[key] = r
+
+        # 점수순 정렬 후 top_k 반환
+        merged = sorted(all_results.values(), key=lambda x: x["score"], reverse=True)
+        return merged[:top_k]
 
     def search_images(self, query: str, top_k: int = 10) -> list[dict]:
         """이미지 컬렉션에서 SigLIP 텍스트 인코더를 사용한 검색."""

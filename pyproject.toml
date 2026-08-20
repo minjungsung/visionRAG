@@ -37,6 +37,11 @@ mlops = [
     "dvc[s3]>=3.55",
     "deepchecks>=0.18",
 ]
+eval = [
+    "ragas>=0.2",
+    "datasets>=2.0",
+    "langchain-openai>=0.2",
+]
 
 [tool.ruff]
 line-length = 100
