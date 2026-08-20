@@ -7,7 +7,7 @@ import numpy as np
 import tritonclient.grpc as grpcclient
 from minio import Minio
 from PIL import Image
-from pymilvus import connections, Collection
+from pymilvus import Collection, connections
 from unstructured.partition.auto import partition
 
 from src.config.settings import settings

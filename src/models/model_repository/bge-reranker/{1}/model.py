@@ -1,5 +1,5 @@
-import triton_python_backend_utils as pb_utils
 import numpy as np
+import triton_python_backend_utils as pb_utils
 from sentence_transformers import CrossEncoder
 
 

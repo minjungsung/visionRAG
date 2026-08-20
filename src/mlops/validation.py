@@ -13,12 +13,12 @@ def validate_embeddings(
     output_path: str = "reports/embedding_validation.html",
 ) -> dict:
     """Validate embedding quality using Deepchecks tabular suite."""
+    import pandas as pd
     from deepchecks.tabular import Dataset, Suite
     from deepchecks.tabular.checks import (
         FeatureFeatureCorrelation,
         OutlierSampleDetection,
     )
-    import pandas as pd
 
     df = pd.DataFrame(embeddings, columns=[f"dim_{i}" for i in range(embeddings.shape[1])])
     if labels:
@@ -90,9 +90,9 @@ def check_data_drift(
     output_path: str = "reports/drift_report.html",
 ) -> dict:
     """Detect embedding distribution drift between reference and current data."""
+    import pandas as pd
     from deepchecks.tabular import Dataset, Suite
     from deepchecks.tabular.checks import WholeDatasetDrift
-    import pandas as pd
 
     cols = [f"dim_{i}" for i in range(reference_embeddings.shape[1])]
     ref_df = pd.DataFrame(reference_embeddings, columns=cols)

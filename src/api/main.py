@@ -1,10 +1,9 @@
 """VisionRAG API 서버."""
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, File, UploadFile
 from pydantic import BaseModel
 
-from src.config.settings import settings
 from src.mlops.metrics import PrometheusMiddleware, metrics_endpoint
 
 
@@ -63,6 +62,24 @@ def search(req: QueryRequest):
 
     retriever = RetrievalPipeline()
     return {"results": retriever.search(req.query, top_k=req.top_k)}
+
+
+@app.post("/search/multimodal")
+def search_multimodal(req: QueryRequest):
+    """멀티모달 검색 — 텍스트 + 이미지 통합 결과 반환."""
+    from src.retrieval.pipeline import RetrievalPipeline
+
+    retriever = RetrievalPipeline()
+    return {"results": retriever.search_multimodal(req.query, top_k=req.top_k)}
+
+
+@app.post("/search/images")
+def search_images(req: QueryRequest):
+    """이미지 전용 검색 — SigLIP 텍스트 인코더 기반."""
+    from src.retrieval.pipeline import RetrievalPipeline
+
+    retriever = RetrievalPipeline()
+    return {"results": retriever.search_images(req.query, top_k=req.top_k)}
 
 
 @app.post("/query")

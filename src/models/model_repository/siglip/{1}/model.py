@@ -1,6 +1,6 @@
-import triton_python_backend_utils as pb_utils
 import numpy as np
 import torch
+import triton_python_backend_utils as pb_utils
 from transformers import SiglipModel, SiglipProcessor
 
 
