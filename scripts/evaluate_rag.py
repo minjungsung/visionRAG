@@ -32,6 +32,9 @@ import os
 import sys
 from pathlib import Path
 
+# Disable OpenAI Responses API auto-detection (required for BCAI proxy)
+os.environ.setdefault("OPENAI_USE_RESPONSES", "0")
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
@@ -43,7 +46,8 @@ METRICS_PATH = REPORTS_DIR / "rag_metrics.json"
 PER_QUERY_PATH = REPORTS_DIR / "rag_per_query.csv"
 
 # Config
-RAGAS_LLM_MODEL = os.getenv("RAGAS_LLM_MODEL", "gpt-4o-mini")
+RAGAS_LLM_MODEL = os.getenv("RAGAS_LLM_MODEL", os.getenv("OPENAI_MODEL", "gpt-4o-mini"))
+OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "")
 VISIONRAG_API_URL = os.getenv("VISIONRAG_API_URL", "http://localhost:8080")
 RUN_MODE = os.getenv("RAGAS_RUN_MODE", "offline")
 
@@ -155,6 +159,13 @@ def prepare_dataset_online(samples: list[dict]) -> dict[str, list]:
 
 def run_ragas_evaluation(eval_data: dict[str, list]) -> tuple[dict, list[dict]]:
     """Run RAGAS evaluation and return aggregate + per-query metrics."""
+    # Patch missing import that RAGAS 0.4.x expects
+    import sys
+    from unittest.mock import MagicMock
+
+    if "langchain_community.chat_models.vertexai" not in sys.modules:
+        sys.modules["langchain_community.chat_models.vertexai"] = MagicMock()
+
     from datasets import Dataset
     from ragas import evaluate
     from ragas.metrics import (
@@ -171,9 +182,20 @@ def run_ragas_evaluation(eval_data: dict[str, list]) -> tuple[dict, list[dict]]:
     logger.info(f"Using LLM: {RAGAS_LLM_MODEL}")
 
     # Configure LLM for RAGAS
+    # Disable SSL verification for corporate proxies
+    import httpx
     from langchain_openai import ChatOpenAI
 
-    llm = ChatOpenAI(model=RAGAS_LLM_MODEL, temperature=0)
+    llm_kwargs = {
+        "model": RAGAS_LLM_MODEL,
+        "temperature": 0,
+        "n": 1,
+        "http_client": httpx.Client(verify=False),
+        "http_async_client": httpx.AsyncClient(verify=False),
+    }
+    if OPENAI_BASE_URL:
+        llm_kwargs["base_url"] = OPENAI_BASE_URL
+    llm = ChatOpenAI(**llm_kwargs)
 
     # Run evaluation
     metrics = [faithfulness, answer_relevancy, context_precision, context_recall]

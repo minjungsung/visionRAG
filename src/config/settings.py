@@ -46,6 +46,7 @@ class Settings(BaseSettings):
     # OpenAI (RAG 답변 생성 fallback)
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
+    openai_base_url: str = ""  # 빈 문자열이면 기본 OpenAI, 설정하면 BCAI 등 프록시 사용
 
     # ClearML
     clearml_api_host: str = "http://localhost:8081"

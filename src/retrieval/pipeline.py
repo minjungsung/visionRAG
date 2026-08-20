@@ -3,7 +3,6 @@
 import logging
 
 import numpy as np
-import tritonclient.grpc as grpcclient
 from pymilvus import Collection, connections
 
 from src.config.settings import settings
@@ -14,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class RetrievalPipeline:
     def __init__(self):
-        self.triton = grpcclient.InferenceServerClient(url=settings.triton_url)
+        self._triton = None
         connections.connect(host=settings.milvus_host, port=settings.milvus_port)
         self.text_col = Collection(settings.text_collection)
         self.image_col = Collection(settings.image_collection)
@@ -27,6 +26,27 @@ class RetrievalPipeline:
             openai_api_key=settings.rewrite_openai_api_key or None,
             model=settings.rewrite_llm_model,
         )
+
+        # Embedding model (local fallback)
+        self._embed_model = None
+
+    @property
+    def triton(self):
+        """Lazy-init Triton client."""
+        if self._triton is None and settings.use_triton:
+            import tritonclient.grpc as grpcclient
+
+            self._triton = grpcclient.InferenceServerClient(url=settings.triton_url)
+        return self._triton
+
+    @property
+    def embed_model(self):
+        """Lazy-init local embedding model."""
+        if self._embed_model is None:
+            from src.models.embedding import EmbeddingModel
+
+            self._embed_model = EmbeddingModel()
+        return self._embed_model
 
     def search(self, query: str, top_k: int = 10) -> list[dict]:
         """텍스트 전용 검색 (query rewriting 포함)."""
@@ -131,27 +151,60 @@ class RetrievalPipeline:
         return merged[:top_k]
 
     def _embed_query(self, query: str) -> list[float]:
-        """BGE-M3로 텍스트 쿼리 임베딩 생성."""
-        input_tensor = grpcclient.InferInput("text", [1, 1], "BYTES")
-        input_tensor.set_data_from_numpy(np.array([[query.encode()]], dtype=object))
-        result = self.triton.infer("bge-m3", [input_tensor])
-        return result.as_numpy("embedding")[0].tolist()
+        """BGE-M3로 텍스트 쿼리 임베딩 생성. Triton → 로컬 fallback."""
+        if settings.use_triton and self.triton:
+            try:
+                import tritonclient.grpc as grpcclient
+
+                input_tensor = grpcclient.InferInput("text", [1, 1], "BYTES")
+                input_tensor.set_data_from_numpy(np.array([[query.encode()]], dtype=object))
+                result = self.triton.infer("bge-m3", [input_tensor])
+                return result.as_numpy("embedding")[0].tolist()
+            except Exception as e:
+                logger.warning(f"Triton embed failed, using local model: {e}")
+
+        # Local fallback
+        embeddings = self.embed_model.encode([query])
+        return embeddings[0].tolist()
 
     def _embed_query_for_images(self, query: str) -> list[float]:
         """SigLIP 텍스트 인코더로 이미지 검색용 쿼리 임베딩 생성."""
-        input_tensor = grpcclient.InferInput("text", [1, 1], "BYTES")
-        input_tensor.set_data_from_numpy(np.array([[query.encode()]], dtype=object))
-        result = self.triton.infer("siglip", [input_tensor])
-        return result.as_numpy("embedding")[0].tolist()
+        if settings.use_triton and self.triton:
+            try:
+                import tritonclient.grpc as grpcclient
+
+                input_tensor = grpcclient.InferInput("text", [1, 1], "BYTES")
+                input_tensor.set_data_from_numpy(np.array([[query.encode()]], dtype=object))
+                result = self.triton.infer("siglip", [input_tensor])
+                return result.as_numpy("embedding")[0].tolist()
+            except Exception as e:
+                logger.warning(f"Triton SigLIP failed: {e}")
+
+        # Fallback: use text embedding (not ideal but functional for testing)
+        return self._embed_query(query)
 
     def _rerank(self, query: str, passages: list[str]) -> list[tuple[int, float]]:
-        """BGE-Reranker로 텍스트 후보 리랭킹."""
-        n = len(passages)
-        q_input = grpcclient.InferInput("query", [n, 1], "BYTES")
-        q_input.set_data_from_numpy(np.array([[query.encode()]] * n, dtype=object))
-        p_input = grpcclient.InferInput("passage", [n, 1], "BYTES")
-        p_input.set_data_from_numpy(np.array([[p.encode()] for p in passages], dtype=object))
+        """BGE-Reranker로 텍스트 후보 리랭킹. Triton → cosine similarity fallback."""
+        if settings.use_triton and self.triton:
+            try:
+                import tritonclient.grpc as grpcclient
 
-        result = self.triton.infer("bge-reranker", [q_input, p_input])
-        scores = result.as_numpy("score").flatten()
+                n = len(passages)
+                q_input = grpcclient.InferInput("query", [n, 1], "BYTES")
+                q_input.set_data_from_numpy(np.array([[query.encode()]] * n, dtype=object))
+                p_input = grpcclient.InferInput("passage", [n, 1], "BYTES")
+                p_input.set_data_from_numpy(
+                    np.array([[p.encode()] for p in passages], dtype=object)
+                )
+
+                result = self.triton.infer("bge-reranker", [q_input, p_input])
+                scores = result.as_numpy("score").flatten()
+                return sorted(enumerate(scores), key=lambda x: x[1], reverse=True)
+            except Exception as e:
+                logger.warning(f"Triton rerank failed, using cosine fallback: {e}")
+
+        # Fallback: cosine similarity 기반 재정렬
+        query_emb = np.array(self._embed_query(query))
+        passage_embs = self.embed_model.encode(passages)
+        scores = passage_embs @ query_emb
         return sorted(enumerate(scores), key=lambda x: x[1], reverse=True)

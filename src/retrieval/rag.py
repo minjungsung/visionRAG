@@ -33,9 +33,15 @@ class RAGPipeline:
     def openai(self):
         """Lazy-init OpenAI client."""
         if self._openai is None and settings.openai_api_key:
+            import httpx
             from openai import OpenAI
 
-            self._openai = OpenAI(api_key=settings.openai_api_key)
+            kwargs = {"api_key": settings.openai_api_key}
+            if settings.openai_base_url:
+                kwargs["base_url"] = settings.openai_base_url
+                # Corporate proxies may need SSL verification disabled
+                kwargs["http_client"] = httpx.Client(verify=False)
+            self._openai = OpenAI(**kwargs)
         return self._openai
 
     def answer(
@@ -121,7 +127,6 @@ class RAGPipeline:
                     {"role": "user", "content": prompt},
                 ],
                 temperature=0.3,
-                max_tokens=1024,
             )
             return response.choices[0].message.content.strip()
         except Exception as e:
