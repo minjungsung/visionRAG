@@ -1,5 +1,5 @@
 """Milvus 컬렉션 초기화 스크립트."""
-from pymilvus import connections, CollectionSchema, FieldSchema, DataType, Collection, utility
+from pymilvus import Collection, CollectionSchema, DataType, FieldSchema, connections, utility
 
 from src.config.settings import settings
 

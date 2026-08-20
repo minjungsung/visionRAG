@@ -5,8 +5,8 @@ import numpy as np
 import tritonclient.grpc as grpcclient
 
 from src.config.settings import settings
-from src.retrieval.pipeline import RetrievalPipeline
 from src.mlops import trace_rag_pipeline
+from src.retrieval.pipeline import RetrievalPipeline
 
 
 class RAGPipeline:

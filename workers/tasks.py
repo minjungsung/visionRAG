@@ -1,6 +1,6 @@
 """비동기 인제스천 태스크."""
-from workers.celery_app import app
 from src.ingestion.pipeline import IngestionPipeline
+from workers.celery_app import app
 
 
 @app.task(bind=True)

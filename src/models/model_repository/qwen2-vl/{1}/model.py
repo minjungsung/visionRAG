@@ -1,8 +1,9 @@
-import triton_python_backend_utils as pb_utils
-import numpy as np
-from transformers import Qwen2VLForConditionalGeneration, AutoProcessor
-from PIL import Image
 import io
+
+import numpy as np
+import triton_python_backend_utils as pb_utils
+from PIL import Image
+from transformers import AutoProcessor, Qwen2VLForConditionalGeneration
 
 
 class TritonPythonModel:
