@@ -1,4 +1,5 @@
 """Search and query endpoint tests with mocked retrieval."""
+
 import sys
 from unittest.mock import MagicMock, patch
 

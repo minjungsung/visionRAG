@@ -58,8 +58,7 @@ def read_pdf_file(path: Path) -> str:
         pass
 
     logger.warning(
-        f"No PDF library available (install PyMuPDF or pdfplumber). "
-        f"Skipping {path.name}."
+        f"No PDF library available (install PyMuPDF or pdfplumber). Skipping {path.name}."
     )
     return ""
 
@@ -100,7 +99,9 @@ def recursive_character_split(
             separator = sep
             break
 
-    remaining_separators = separators[separators.index(separator) + 1:] if separator in separators else separators[1:]
+    remaining_separators = (
+        separators[separators.index(separator) + 1 :] if separator in separators else separators[1:]
+    )
 
     # Split on the chosen separator
     parts = text.split(separator) if separator else list(text)
@@ -146,9 +147,7 @@ def recursive_character_split(
         merged = separator.join(current_chunk)
         if len(merged) > chunk_size and remaining_separators:
             chunks.extend(
-                recursive_character_split(
-                    merged, chunk_size, chunk_overlap, remaining_separators
-                )
+                recursive_character_split(merged, chunk_size, chunk_overlap, remaining_separators)
             )
         else:
             chunks.append(merged)

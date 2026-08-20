@@ -1,4 +1,5 @@
 """RAG 답변 생성 파이프라인."""
+
 import time
 
 import numpy as np

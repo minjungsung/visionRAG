@@ -1,4 +1,5 @@
 """Qwen2-VL Vision-Language 모델."""
+
 import io
 
 import numpy as np
@@ -18,7 +19,10 @@ class TritonPythonModel:
         responses = []
         for request in requests:
             prompt = (
-                pb_utils.get_input_tensor_by_name(request, "prompt").as_numpy().flatten()[0].decode("utf-8")
+                pb_utils.get_input_tensor_by_name(request, "prompt")
+                .as_numpy()
+                .flatten()[0]
+                .decode("utf-8")
             )
             image_bytes = pb_utils.get_input_tensor_by_name(request, "image").as_numpy().tobytes()
 
@@ -30,13 +34,15 @@ class TritonPythonModel:
                 images.append(img)
 
             messages = [{"role": "user", "content": content}]
-            text = self.processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-            inputs = self.processor(
-                text=[text], images=images or None, return_tensors="pt"
-            ).to(self.model.device)
+            text = self.processor.apply_chat_template(
+                messages, tokenize=False, add_generation_prompt=True
+            )
+            inputs = self.processor(text=[text], images=images or None, return_tensors="pt").to(
+                self.model.device
+            )
             output_ids = self.model.generate(**inputs, max_new_tokens=512)
             result = self.processor.batch_decode(
-                output_ids[:, inputs.input_ids.shape[1]:], skip_special_tokens=True
+                output_ids[:, inputs.input_ids.shape[1] :], skip_special_tokens=True
             )[0]
 
             out = pb_utils.Tensor("response", np.array([result.encode("utf-8")]))

@@ -61,10 +61,7 @@ def load_test_queries() -> list[dict]:
     """Load test queries from data/test_queries.jsonl."""
     queries = []
     if not TEST_QUERIES_PATH.exists():
-        logger.warning(
-            f"Test queries file not found: {TEST_QUERIES_PATH}. "
-            f"Creating sample file."
-        )
+        logger.warning(f"Test queries file not found: {TEST_QUERIES_PATH}. Creating sample file.")
         create_sample_test_queries()
 
     with open(TEST_QUERIES_PATH, "r", encoding="utf-8") as f:
@@ -153,7 +150,9 @@ def compute_mrr(retrieved_doc_ids: list[str], relevant_doc_ids: set[str]) -> flo
     return 0.0
 
 
-def compute_precision_at_k(retrieved_doc_ids: list[str], relevant_doc_ids: set[str], k: int) -> float:
+def compute_precision_at_k(
+    retrieved_doc_ids: list[str], relevant_doc_ids: set[str], k: int
+) -> float:
     """Compute Precision@k for a single query."""
     if not relevant_doc_ids or k == 0:
         return 0.0
@@ -170,7 +169,7 @@ def compute_recall_at_k(retrieved_doc_ids: list[str], relevant_doc_ids: set[str]
     if not relevant_doc_ids:
         return 0.0
     top_k = retrieved_doc_ids[:k]
-    found_relevant = set(doc_id for doc_id in top_k if doc_id in relevant_doc_ids)
+    found_relevant = {doc_id for doc_id in top_k if doc_id in relevant_doc_ids}
     return len(found_relevant) / len(relevant_doc_ids)
 
 
@@ -284,9 +283,7 @@ def evaluate_queries(
 def save_metrics(metrics: dict[str, Any]) -> None:
     """Save aggregate metrics to JSON."""
     METRICS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    METRICS_PATH.write_text(
-        json.dumps(metrics, indent=2, ensure_ascii=False), encoding="utf-8"
-    )
+    METRICS_PATH.write_text(json.dumps(metrics, indent=2, ensure_ascii=False), encoding="utf-8")
     logger.info(f"Metrics saved to {METRICS_PATH}")
 
 
@@ -325,7 +322,9 @@ def main() -> None:
     queries = load_test_queries()
     if not queries:
         logger.error("No test queries found.")
-        save_metrics({"mrr": 0.0, "num_queries": 0, "num_chunks": len(chunks), "error": "no_queries"})
+        save_metrics(
+            {"mrr": 0.0, "num_queries": 0, "num_chunks": len(chunks), "error": "no_queries"}
+        )
         save_plots([])
         return
 

@@ -1,4 +1,5 @@
 """Milvus 컬렉션 초기화 스크립트."""
+
 from pymilvus import Collection, CollectionSchema, DataType, FieldSchema, connections, utility
 
 from src.config.settings import settings
@@ -19,7 +20,11 @@ def create_collections():
         col = Collection(settings.text_collection, CollectionSchema(fields))
         col.create_index(
             "embedding",
-            {"index_type": "HNSW", "metric_type": "COSINE", "params": {"M": 16, "efConstruction": 256}},
+            {
+                "index_type": "HNSW",
+                "metric_type": "COSINE",
+                "params": {"M": 16, "efConstruction": 256},
+            },
         )
         print(f"Created collection: {settings.text_collection}")
 
@@ -35,7 +40,11 @@ def create_collections():
         col = Collection(settings.image_collection, CollectionSchema(fields))
         col.create_index(
             "embedding",
-            {"index_type": "HNSW", "metric_type": "COSINE", "params": {"M": 16, "efConstruction": 256}},
+            {
+                "index_type": "HNSW",
+                "metric_type": "COSINE",
+                "params": {"M": 16, "efConstruction": 256},
+            },
         )
         print(f"Created collection: {settings.image_collection}")
 

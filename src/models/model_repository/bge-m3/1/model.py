@@ -1,4 +1,5 @@
 """BGE-M3 텍스트 임베딩 모델."""
+
 import numpy as np
 import triton_python_backend_utils as pb_utils
 from sentence_transformers import SentenceTransformer

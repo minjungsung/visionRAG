@@ -4,6 +4,7 @@ When settings.use_triton is True, embeddings are computed via gRPC calls to
 NVIDIA Triton Inference Server. When False (default), local SentenceTransformer
 / open_clip models are used instead.
 """
+
 from __future__ import annotations
 
 import logging
@@ -39,9 +40,7 @@ class EmbeddingModel:
             try:
                 import tritonclient.grpc as grpcclient
 
-                self._triton_client = grpcclient.InferenceServerClient(
-                    url=settings.triton_url
-                )
+                self._triton_client = grpcclient.InferenceServerClient(url=settings.triton_url)
                 if not self._triton_client.is_server_live():
                     raise ConnectionError("Triton server is not live")
                 logger.info("Connected to Triton at %s", settings.triton_url)
@@ -89,13 +88,9 @@ class EmbeddingModel:
             except ImportError:
                 from sentence_transformers import SentenceTransformer
 
-                self._image_model = SentenceTransformer(
-                    "google/siglip-so400m-patch14-384"
-                )
+                self._image_model = SentenceTransformer("google/siglip-so400m-patch14-384")
                 self._image_preprocess = None
-                logger.info(
-                    "Loaded local image model: SigLIP via sentence-transformers"
-                )
+                logger.info("Loaded local image model: SigLIP via sentence-transformers")
         return self._image_model
 
     # ------------------------------------------------------------------
@@ -160,9 +155,7 @@ class EmbeddingModel:
                     "Triton text encoding failed (%s), falling back to local model",
                     exc,
                 )
-        return self.text_model.encode(texts, normalize_embeddings=True).astype(
-            np.float32
-        )
+        return self.text_model.encode(texts, normalize_embeddings=True).astype(np.float32)
 
     def encode_image(self, images: list[Image.Image]) -> np.ndarray:
         """Encode PIL images to embeddings.
@@ -179,9 +172,7 @@ class EmbeddingModel:
         if settings.use_triton:
             try:
                 # Convert PIL images to numpy for Triton
-                np_images = [
-                    np.array(img.convert("RGB").resize((384, 384))) for img in images
-                ]
+                np_images = [np.array(img.convert("RGB").resize((384, 384))) for img in images]
                 return self._triton_encode_image(np_images)
             except Exception as exc:
                 logger.warning(

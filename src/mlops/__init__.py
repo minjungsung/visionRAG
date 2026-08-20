@@ -1,9 +1,8 @@
 """LangSmith tracing for RAG pipeline."""
+
 from __future__ import annotations
 
 import functools
-import time
-from typing import Any
 
 from src.config.settings import settings
 
