@@ -2,21 +2,22 @@
 
 import base64
 import io
+import logging
 import uuid
 
-import numpy as np
-import tritonclient.grpc as grpcclient
 from minio import Minio
 from PIL import Image
 from pymilvus import Collection, connections
-from unstructured.partition.auto import partition
 
 from src.config.settings import settings
+from src.models.embedding import EmbeddingModel
+
+logger = logging.getLogger(__name__)
 
 
 class IngestionPipeline:
     def __init__(self):
-        self.triton = grpcclient.InferenceServerClient(url=settings.triton_url)
+        self.embed_model = EmbeddingModel()
         self.minio = Minio(
             settings.minio_endpoint,
             settings.minio_access_key,
@@ -31,12 +32,10 @@ class IngestionPipeline:
         doc_id = str(uuid.uuid4())
 
         # MinIO에 원본 저장
-        self.minio.put_object(
-            settings.minio_bucket, f"{doc_id}/{file_path}", io.BytesIO(file_bytes), len(file_bytes)
-        )
+        self._store_to_minio(doc_id, file_path, file_bytes)
 
-        # unstructured로 파싱
-        elements = partition(file=io.BytesIO(file_bytes), metadata_filename=file_path)
+        # 파싱
+        elements = self._parse(file_path, file_bytes)
 
         texts, images = [], []
         for el in elements:
@@ -50,14 +49,53 @@ class IngestionPipeline:
         if images:
             self._ingest_images(doc_id, images)
 
+        logger.info(f"Ingested {file_path}: {len(texts)} texts, {len(images)} images → {doc_id}")
         return doc_id
 
-    def _ingest_texts(self, doc_id: str, elements):
+    def _store_to_minio(self, doc_id: str, file_path: str, file_bytes: bytes) -> None:
+        """원본 파일을 MinIO에 저장."""
+        bucket = settings.minio_bucket
+        if not self.minio.bucket_exists(bucket):
+            self.minio.make_bucket(bucket)
+        self.minio.put_object(
+            bucket, f"{doc_id}/{file_path}", io.BytesIO(file_bytes), len(file_bytes)
+        )
+
+    def _parse(self, file_path: str, file_bytes: bytes):
+        """unstructured로 문서 파싱. 설치 안 되어 있으면 간단한 텍스트 분할."""
+        try:
+            from unstructured.partition.auto import partition
+
+            return partition(file=io.BytesIO(file_bytes), metadata_filename=file_path)
+        except ImportError:
+            logger.warning("unstructured not installed, using simple text split")
+            return self._simple_parse(file_path, file_bytes)
+
+    def _simple_parse(self, file_path: str, file_bytes: bytes):
+        """unstructured 없을 때 간단한 텍스트 파싱."""
+        from dataclasses import dataclass, field
+
+        @dataclass
+        class FakeMetadata:
+            page_number: int = 0
+
+        @dataclass
+        class FakeElement:
+            text: str = ""
+            category: str = "Text"
+            metadata: FakeMetadata = field(default_factory=FakeMetadata)
+
+        text = file_bytes.decode("utf-8", errors="replace")
+        # 단락 단위로 분할
+        paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
+        return [FakeElement(text=p) for p in paragraphs]
+
+    def _ingest_texts(self, doc_id: str, elements) -> None:
+        """텍스트 청크 임베딩 생성 후 Milvus 저장."""
         chunks = [el.text for el in elements]
-        input_tensor = grpcclient.InferInput("text", [len(chunks), 1], "BYTES")
-        input_tensor.set_data_from_numpy(np.array([[c.encode()] for c in chunks], dtype=object))
-        result = self.triton.infer("bge-m3", [input_tensor])
-        embeddings = result.as_numpy("embedding")
+
+        # EmbeddingModel 사용 (Triton/local 자동 선택)
+        embeddings = self.embed_model.encode(chunks)
 
         self.text_col.insert(
             [
@@ -68,22 +106,22 @@ class IngestionPipeline:
                 [getattr(el.metadata, "page_number", 0) or 0 for el in elements],
             ]
         )
+        logger.debug(f"Inserted {len(chunks)} text chunks for doc {doc_id}")
 
-    def _ingest_images(self, doc_id: str, elements):
+    def _ingest_images(self, doc_id: str, elements) -> None:
+        """이미지 임베딩 생성 후 Milvus 저장."""
         for el in elements:
             img_bytes = base64.b64decode(el.metadata.image_base64)
-            img = Image.open(io.BytesIO(img_bytes)).convert("RGB").resize((384, 384))
-            pixel = np.array(img).transpose(2, 0, 1).astype(np.uint8)
+            img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
 
+            # MinIO에 이미지 저장
             img_key = f"{doc_id}/images/{uuid.uuid4()}.png"
             self.minio.put_object(
                 settings.minio_bucket, img_key, io.BytesIO(img_bytes), len(img_bytes)
             )
 
-            input_tensor = grpcclient.InferInput("image", [1, 3, 384, 384], "UINT8")
-            input_tensor.set_data_from_numpy(pixel[np.newaxis, ...])
-            result = self.triton.infer("siglip", [input_tensor])
-            embedding = result.as_numpy("embedding")
+            # EmbeddingModel 사용 (Triton/local 자동 선택)
+            embedding = self.embed_model.encode_image([img])
 
             self.image_col.insert(
                 [
@@ -94,3 +132,4 @@ class IngestionPipeline:
                     [""],
                 ]
             )
+        logger.debug(f"Inserted {len(elements)} images for doc {doc_id}")
