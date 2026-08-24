@@ -12,7 +12,7 @@ help: ## 도움말
 # === 처음 시작 ===
 
 setup: ## 🚀 첫 실행 (인프라 + 초기화 + 데이터 + UI)
-	docker compose up -d milvus minio redis
+	docker compose up -d milvus minio redis attu
 	@sleep 3
 	PYTHONPATH=. python scripts/init_milvus.py
 	PYTHONPATH=. python scripts/ingest_raw.py
@@ -22,7 +22,7 @@ setup: ## 🚀 첫 실행 (인프라 + 초기화 + 데이터 + UI)
 # === 실행 ===
 
 start: ## 📦 Docker 인프라만 띄우기
-	docker compose up -d milvus minio redis
+	docker compose up -d milvus minio redis attu
 
 stop: ## 🛑 Docker 인프라 내리기 (데이터 유지)
 	docker compose down
