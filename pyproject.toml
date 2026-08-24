@@ -54,6 +54,7 @@ ignore = ["BLE001"]
 "tests/**" = ["SIM117"]
 "scripts/prepare_data.py" = ["SIM115"]
 "src/api/main.py" = ["B008"]
+"app.py" = ["B008"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
