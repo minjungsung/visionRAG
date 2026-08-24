@@ -47,17 +47,37 @@
 # 1. 인프라 (DB, Storage, Queue)
 docker compose up -d milvus minio redis
 
-# 2. MLOps 인프라
-docker compose up -d clearml-server prometheus grafana
+# 2. Milvus 컬렉션 초기화 (최초 1회)
+source .venv/bin/activate
+PYTHONPATH=. python scripts/init_milvus.py
 
-# 3. Triton (GPU 필요)
-docker compose up -d triton
-
-# 4. API 서버
+# 3. API 서버
 uvicorn src.api.main:app --reload --port 8080
+
+# 4. Web UI (Gradio)
+PYTHONPATH=. python app.py
+# 브라우저에서 http://localhost:7860
 
 # 5. 헬스체크
 curl http://localhost:8080/health
+```
+
+### GPU 없이 로컬 모드 (기본)
+
+`.env`에 `USE_TRITON=false` (기본값)이면 로컬 sentence-transformers 모델 사용.  
+Docker로 Milvus + MinIO + Redis만 띄우면 전체 파이프라인 동작:
+
+```bash
+docker compose up -d milvus minio redis
+PYTHONPATH=. python scripts/init_milvus.py
+uvicorn src.api.main:app --reload --port 8080
+```
+
+### 전체 인프라 (GPU 있을 때)
+
+```bash
+docker compose up -d  # 전부 띄움 (Triton 포함)
+# .env에 USE_TRITON=true 설정
 ```
 
 ## MLOps 설정
