@@ -5,11 +5,10 @@ requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.30",
-    "pymilvus>=2.4",
+    "faiss-cpu>=1.7",
     "sentence-transformers>=3.0",
     "pillow>=10.4",
     "python-multipart>=0.0.9",
-    "celery[redis]>=5.4",
     "minio>=7.2",
     "pydantic-settings>=2.4",
     "prometheus-client>=0.21",
