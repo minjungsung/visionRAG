@@ -44,23 +44,30 @@
 ## 실행
 
 ```bash
-# 1. 인프라 (DB, Storage, Queue)
-docker compose up -d milvus minio redis
+# 처음 시작 (Docker + 초기화 + 데이터 인제스천)
+make setup
 
-# 2. Milvus 컬렉션 초기화 (최초 1회)
-source .venv/bin/activate
-PYTHONPATH=. python scripts/init_milvus.py
-
-# 3. API 서버
-uvicorn src.api.main:app --reload --port 8080
-
-# 4. Web UI (Gradio)
-PYTHONPATH=. python app.py
-# 브라우저에서 http://localhost:7860
-
-# 5. 헬스체크
-curl http://localhost:8080/health
+# Web UI 실행
+make ui
+# → http://localhost:7860 에서 질문/검색/파일업로드
 ```
+
+### 주요 명령어
+
+| 명령어 | 설명 |
+|--------|------|
+| `make setup` | 🚀 첫 실행 (인프라 + 초기화 + 데이터) |
+| `make ui` | 🌐 Web UI (http://localhost:7860) |
+| `make api` | 📡 API 서버 (http://localhost:8080) |
+| `make start` | 📦 Docker 인프라만 띄우기 |
+| `make stop` | 🛑 Docker 내리기 |
+| `make ingest` | 📄 data/raw 전체 인제스천 |
+| `make ingest-file FILE=path` | 📄 파일 하나만 인제스천 |
+| `make search Q="질문"` | 🔍 터미널에서 검색 테스트 |
+| `make test` | 🧪 테스트 실행 |
+| `make lint` | 🔍 린트 체크 |
+| `make reset` | ⚠️ Milvus 초기화 (데이터 리셋) |
+| `make help` | 전체 명령어 목록 |
 
 ### GPU 없이 로컬 모드 (기본)
 
@@ -68,9 +75,8 @@ curl http://localhost:8080/health
 Docker로 Milvus + MinIO + Redis만 띄우면 전체 파이프라인 동작:
 
 ```bash
-docker compose up -d milvus minio redis
-PYTHONPATH=. python scripts/init_milvus.py
-uvicorn src.api.main:app --reload --port 8080
+make setup   # 이거 하나면 끝
+make ui      # UI 실행
 ```
 
 ### 전체 인프라 (GPU 있을 때)
