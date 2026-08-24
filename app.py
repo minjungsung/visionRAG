@@ -188,7 +188,7 @@ with gr.Blocks(title="VisionRAG", theme=gr.themes.Soft()) as demo:
         question_input = gr.Textbox(
             label="질문 (Enter로 전송)",
             placeholder="예: 렘은 누구야? / 주술회전 최강 캐릭터는?",
-            lines=2,
+            lines=1,
         )
         with gr.Row():
             answer_style = gr.Dropdown(
