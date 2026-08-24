@@ -40,67 +40,80 @@ def get_retriever():
     return _retriever
 
 
-# --- Tab 1: RAG 질의 ---
+# --- Tab 1: 질문하기 ---
 
 
-def ask_question(question, prompt_type, top_k, progress=gr.Progress()):
-    """질문에 대한 RAG 답변 생성."""
+def ask_question(question, answer_style, num_results, progress=gr.Progress()):
+    """질문에 대한 AI 답변 생성."""
     if not question.strip():
-        return "❌ 질문을 입력하세요.", ""
+        return "💡 질문을 입력하고 Enter를 눌러주세요!", ""
 
-    progress(0.1, desc="🔍 관련 문서 검색 중...")
+    progress(0.1, desc="🔍 관련 정보 찾는 중...")
     t0 = time.time()
 
     rag = get_rag()
 
-    progress(0.4, desc="📄 문서에서 답변 생성 중...")
+    # 답변 스타일 → 내부 프롬프트 타입 변환
+    style_map = {
+        "기본": None,
+        "사실 위주로 정확하게": "factual",
+        "분석적으로 자세하게": "analytical",
+        "비교해서 설명": "comparative",
+        "방법/순서 알려줘": "how_to",
+    }
+
+    progress(0.4, desc="💭 답변 만드는 중...")
     result = rag.answer(
         question,
-        top_k=int(top_k),
-        query_type=prompt_type if prompt_type != "default" else None,
+        top_k=int(num_results),
+        query_type=style_map.get(answer_style),
     )
 
     elapsed = time.time() - t0
     progress(1.0, desc="✅ 완료!")
 
-    answer = (
-        f"{result['answer']}\n\n---\n⏱️ {elapsed:.1f}초 소요 | {len(result['sources'])}개 문서 참조"
-    )
+    answer = result["answer"]
+    if elapsed > 0:
+        answer += f"\n\n---\n_⏱️ {elapsed:.1f}초 걸림 · {len(result['sources'])}개 문서 참고_"
 
     sources_text = ""
-    for i, src in enumerate(result["sources"], 1):
-        score = src.get("score", 0)
-        text = src.get("text", "")[:200]
-        sources_text += f"**[{i}]** (유사도: {score:.4f})\n{text}\n\n"
+    if result["sources"]:
+        sources_text = "### 📚 참고한 문서들\n\n"
+        for i, src in enumerate(result["sources"], 1):
+            score = src.get("score", 0)
+            text = src.get("text", "")[:150]
+            relevance = "🟢 높음" if score > 0.5 else "🟡 보통" if score > 0.3 else "🔴 낮음"
+            sources_text += f"**{i}.** ({relevance})\n> {text}...\n\n"
 
-    return answer, sources_text if sources_text else "참조 문서 없음"
+    return answer, sources_text if sources_text else "_참고할 문서를 찾지 못했어요_"
 
 
-# --- Tab 2: 검색만 ---
+# --- Tab 2: 검색 ---
 
 
-def search_only(query, top_k, progress=gr.Progress()):
-    """검색만 수행 (답변 생성 없이)."""
+def search_only(query, num_results, progress=gr.Progress()):
+    """문서 검색만 수행."""
     if not query.strip():
-        return "❌ 검색어를 입력하세요."
+        return "💡 검색어를 입력하고 Enter를 눌러주세요!"
 
-    progress(0.2, desc="🔍 벡터 DB 검색 중...")
+    progress(0.2, desc="🔍 찾는 중...")
     t0 = time.time()
 
     retriever = get_retriever()
-    results = retriever.search(query, top_k=int(top_k))
+    results = retriever.search(query, top_k=int(num_results))
 
     elapsed = time.time() - t0
     progress(1.0, desc="✅ 완료!")
 
     if not results:
-        return f"검색 결과 없음 (⏱️ {elapsed:.1f}초)"
+        return f"😅 '{query}'에 대한 결과를 찾지 못했어요. 다른 키워드로 시도해보세요!"
 
-    output = f"**{len(results)}개 결과** (⏱️ {elapsed:.1f}초)\n\n---\n\n"
+    output = f'### 🔎 "{query}" 검색 결과 ({len(results)}개, {elapsed:.1f}초)\n\n'
     for i, r in enumerate(results, 1):
-        score_bar = "🟢" if r["score"] > 0.5 else "🟡" if r["score"] > 0.3 else "🔴"
-        output += f"### {score_bar} [{i}] 유사도: {r['score']:.4f}\n"
-        output += f"{r['text'][:300]}\n\n---\n\n"
+        score = r["score"]
+        relevance = "🟢" if score > 0.5 else "🟡" if score > 0.3 else "🔴"
+        text = r["text"][:250]
+        output += f"---\n\n**{relevance} {i}번째 결과** (관련도 {score:.0%})\n\n{text}\n\n"
 
     return output
 
@@ -109,132 +122,136 @@ def search_only(query, top_k, progress=gr.Progress()):
 
 
 def upload_file(file, progress=gr.Progress()):
-    """파일을 인제스천 파이프라인에 넣기."""
+    """파일 업로드 → 검색 가능하게 만들기."""
     if file is None:
-        return "❌ 파일을 선택하세요."
+        return "💡 파일을 선택해주세요!"
 
     from src.ingestion.pipeline import IngestionPipeline
 
-    progress(0.2, desc="📄 파일 파싱 중...")
+    progress(0.2, desc="📄 파일 읽는 중...")
 
     try:
         pipeline = IngestionPipeline()
         file_path = Path(file.name)
         file_bytes = file_path.read_bytes()
+        size_kb = len(file_bytes) / 1024
 
-        progress(0.5, desc="🧮 임베딩 생성 중...")
+        progress(0.5, desc="🧮 AI가 내용 분석 중...")
         doc_id = pipeline.ingest_file(file_path.name, file_bytes)
 
         progress(1.0, desc="✅ 완료!")
         return (
-            f"✅ **업로드 완료!**\n\n"
-            f"| 항목 | 값 |\n|------|------|\n"
-            f"| 파일 | `{file_path.name}` |\n"
-            f"| 크기 | {len(file_bytes):,} bytes |\n"
-            f"| 문서 ID | `{doc_id}` |\n\n"
-            f"이제 **검색 탭**에서 이 문서를 찾을 수 있습니다."
+            f"### ✅ 업로드 성공!\n\n"
+            f"**{file_path.name}** ({size_kb:.1f} KB)가 등록됐어요.\n\n"
+            f"이제 **검색** 탭에서 이 파일의 내용을 찾을 수 있습니다! 🎉"
         )
     except Exception as e:
-        return f"❌ **업로드 실패**\n\n```\n{e}\n```"
+        return f"### ❌ 실패\n\n뭔가 잘못됐어요: `{e}`"
 
 
-# --- Tab 4: 시스템 상태 ---
+# --- Tab 4: 도움말 ---
 
 
-def get_system_status():
-    """시스템 구성 정보 표시."""
-    status = f"""## ⚙️ 시스템 설정
+def get_help():
+    return """## 🎯 사용법
 
-| 항목 | 값 | 상태 |
-|------|------|------|
-| Milvus | `{settings.milvus_host}:{settings.milvus_port}` | 🟢 |
-| Triton | `{settings.triton_url}` | {"🟢 사용중" if settings.use_triton else "⚪ 미사용 (로컬 모델)"} |
-| 임베딩 모델 | BGE-M3 (1024차원) | 🟢 |
-| LangSmith | {settings.langsmith_project} | {"🟢 활성" if settings.langsmith_tracing else "⚪ 비활성"} |
+### 💬 질문하기
+AI가 등록된 문서에서 답을 찾아 답변해줘요.
+- "렘은 누구야?"
+- "주술회전 영역전개 설명해줘"
+- "이세계물 추천해줘"
 
-## 📖 사용법
+### 🔎 검색
+관련 문서만 빠르게 찾을 때. AI 답변 없이 검색만 해요.
+- "진격의 거인 세계관"
+- "호흡법 종류"
 
-| 탭 | 기능 | 설명 |
-|----|------|------|
-| 💬 RAG 질의 | 질문 → AI 답변 | 문서 검색 + 답변 생성 (OpenAI 필요) |
-| 🔎 검색 | 쿼리 → 관련 문서 | 벡터 유사도 검색만 (빠름) |
-| 📁 파일 업로드 | 파일 → DB 저장 | txt/md/pdf 지원 |
+### 📁 파일 업로드
+새로운 문서를 추가할 수 있어요.
+- .txt, .md, .pdf 파일 지원
+- 올린 파일은 바로 검색/질문에 반영됨
 
-**팁**: 검색 탭에서 엔터 치면 바로 검색됩니다.
+### 💡 팁
+- **결과 개수**: 많을수록 더 다양한 답, 적을수록 더 정확한 답
+- **답변 스타일**: "사실 위주로"는 팩트 체크, "비교해서"는 여러 작품 비교할 때
+- 검색이 안 되면 다른 키워드로 바꿔보세요 (예: "SAO" → "소드 아트 온라인")
 """
-    return status
 
 
 # --- Gradio UI ---
 
 with gr.Blocks(title="VisionRAG", theme=gr.themes.Soft()) as demo:
-    gr.Markdown("# 🔍 VisionRAG — 멀티모달 지식 관리 시스템")
-    gr.Markdown("텍스트 + 이미지 통합 검색 및 AI 답변 생성")
+    gr.Markdown("# 🔍 VisionRAG")
+    gr.Markdown("궁금한 거 물어보세요! 등록된 문서에서 답을 찾아드려요.")
 
-    with gr.Tab("💬 RAG 질의"):
-        with gr.Row():
-            with gr.Column(scale=3):
-                question_input = gr.Textbox(
-                    label="질문",
-                    placeholder="예: 렘은 누구야? / 고조 사토루 능력 알려줘",
-                    lines=2,
-                )
-            with gr.Column(scale=1):
-                prompt_type = gr.Dropdown(
-                    choices=["default", "factual", "analytical", "comparative", "how_to"],
-                    value="default",
-                    label="프롬프트 타입",
-                )
-                top_k_rag = gr.Slider(1, 20, value=5, step=1, label="Top-K")
-
-        ask_btn = gr.Button("🚀 질문하기 (Enter로도 가능)", variant="primary")
-
-        answer_output = gr.Markdown(
-            label="답변", value="*질문을 입력하고 Enter 또는 버튼을 클릭하세요*"
+    with gr.Tab("💬 질문하기"):
+        question_input = gr.Textbox(
+            label="질문 (Enter로 전송)",
+            placeholder="예: 렘은 누구야? / 주술회전 최강 캐릭터는?",
+            lines=2,
         )
-        sources_output = gr.Markdown(label="출처 문서")
+        with gr.Row():
+            answer_style = gr.Dropdown(
+                choices=[
+                    "기본",
+                    "사실 위주로 정확하게",
+                    "분석적으로 자세하게",
+                    "비교해서 설명",
+                    "방법/순서 알려줘",
+                ],
+                value="기본",
+                label="답변 스타일",
+            )
+            num_results_rag = gr.Slider(
+                1, 10, value=5, step=1, label="참고할 문서 수 (많을수록 넓게 검색)"
+            )
+
+        ask_btn = gr.Button("🚀 질문하기", variant="primary", size="lg")
+
+        answer_output = gr.Markdown(value="*질문을 입력하고 Enter를 눌러보세요! ↵*")
+        sources_output = gr.Markdown()
 
         ask_btn.click(
             ask_question,
-            inputs=[question_input, prompt_type, top_k_rag],
+            inputs=[question_input, answer_style, num_results_rag],
             outputs=[answer_output, sources_output],
         )
         question_input.submit(
             ask_question,
-            inputs=[question_input, prompt_type, top_k_rag],
+            inputs=[question_input, answer_style, num_results_rag],
             outputs=[answer_output, sources_output],
         )
 
     with gr.Tab("🔎 검색"):
         search_input = gr.Textbox(
-            label="검색 쿼리 (Enter로 검색)",
-            placeholder="예: 스쿠나 능력 / 에반게리온 세계관 / 이세계 추천",
+            label="검색어 (Enter로 검색)",
+            placeholder="예: 에반게리온 세계관 / 이세계 작품 / 스탠드 능력",
             lines=1,
         )
-        top_k_search = gr.Slider(1, 20, value=5, step=1, label="Top-K")
+        num_results_search = gr.Slider(1, 20, value=5, step=1, label="결과 개수")
         search_btn = gr.Button("🔍 검색", variant="primary")
-        search_output = gr.Markdown(label="검색 결과", value="*검색어를 입력하고 Enter를 누르세요*")
+        search_output = gr.Markdown(value="*검색어를 입력하고 Enter! ↵*")
 
-        search_btn.click(search_only, inputs=[search_input, top_k_search], outputs=[search_output])
+        search_btn.click(
+            search_only, inputs=[search_input, num_results_search], outputs=[search_output]
+        )
         search_input.submit(
-            search_only, inputs=[search_input, top_k_search], outputs=[search_output]
+            search_only, inputs=[search_input, num_results_search], outputs=[search_output]
         )
 
     with gr.Tab("📁 파일 업로드"):
-        gr.Markdown("문서를 업로드하면 자동으로 텍스트 추출 → 임베딩 생성 → DB 저장됩니다.")
+        gr.Markdown("새 문서를 올리면 AI가 내용을 분석해서 검색 가능하게 만들어요.")
         upload_input = gr.File(
-            label="파일 선택 (.txt, .md, .pdf)",
+            label="파일 선택 (.txt .md .pdf)",
             file_types=[".txt", ".md", ".pdf"],
         )
-        upload_btn = gr.Button("📤 업로드 & 인제스천", variant="primary")
-        upload_output = gr.Markdown(label="결과")
+        upload_btn = gr.Button("📤 업로드", variant="primary")
+        upload_output = gr.Markdown()
 
         upload_btn.click(upload_file, inputs=[upload_input], outputs=[upload_output])
 
-    with gr.Tab("ℹ️ 시스템 정보"):
-        status_output = gr.Markdown(value=get_system_status())
-        refresh_btn = gr.Button("🔄 새로고침")
-        refresh_btn.click(get_system_status, outputs=[status_output])
+    with gr.Tab("❓ 도움말"):
+        gr.Markdown(value=get_help())
 
 
 if __name__ == "__main__":
