@@ -8,7 +8,6 @@ src/models/model_repository/*/1/*.pt
 src/models/model_repository/*/1/*.onnx
 
 # DVC
-/data/raw
 /data/processed
 
 # Reports (generated)

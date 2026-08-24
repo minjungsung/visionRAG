@@ -7,7 +7,6 @@
     http://localhost:7860
 """
 
-import json
 import sys
 from pathlib import Path
 
@@ -26,6 +25,7 @@ def get_rag():
     global _rag
     if _rag is None:
         from src.retrieval.rag import RAGPipeline
+
         _rag = RAGPipeline()
     return _rag
 
@@ -34,11 +34,13 @@ def get_retriever():
     global _retriever
     if _retriever is None:
         from src.retrieval.pipeline import RetrievalPipeline
+
         _retriever = RetrievalPipeline()
     return _retriever
 
 
 # --- Tab 1: RAG 질의 ---
+
 
 def ask_question(question, prompt_type, top_k):
     """질문에 대한 RAG 답변 생성."""
@@ -64,6 +66,7 @@ def ask_question(question, prompt_type, top_k):
 
 # --- Tab 2: 검색만 ---
 
+
 def search_only(query, top_k):
     """검색만 수행 (답변 생성 없이)."""
     if not query.strip():
@@ -81,7 +84,30 @@ def search_only(query, top_k):
     return output if output else "결과 없음"
 
 
-# --- Tab 3: 시스템 상태 ---
+# --- Tab 3: 파일 업로드 ---
+
+
+def upload_file(file):
+    """파일을 인제스천 파이프라인에 넣기."""
+    if file is None:
+        return "파일을 선택하세요."
+
+    from pathlib import Path
+
+    from src.ingestion.pipeline import IngestionPipeline
+
+    try:
+        pipeline = IngestionPipeline()
+        file_path = Path(file.name)
+        file_bytes = file_path.read_bytes()
+        doc_id = pipeline.ingest_file(file_path.name, file_bytes)
+        return f"✅ 업로드 완료!\n\n**파일**: {file_path.name}\n**문서 ID**: `{doc_id}`\n\n이제 검색/질의에서 이 문서를 찾을 수 있습니다."
+    except Exception as e:
+        return f"❌ 업로드 실패: {e}"
+
+
+# --- Tab 4: 시스템 상태 ---
+
 
 def get_system_status():
     """시스템 구성 정보 표시."""
@@ -94,7 +120,7 @@ def get_system_status():
 | OpenAI Model | `{settings.openai_model}` |
 | OpenAI Base URL | `{settings.openai_base_url[:50]}...` |
 | Rewrite Strategy | `{settings.rewrite_strategy}` |
-| LangSmith | {'✅ 활성' if settings.langsmith_tracing else '❌ 비활성'} |
+| LangSmith | {"✅ 활성" if settings.langsmith_tracing else "❌ 비활성"} |
 
 ## 사용법
 
@@ -172,7 +198,20 @@ with gr.Blocks(title="VisionRAG", theme=gr.themes.Soft()) as demo:
         search_output = gr.Markdown(label="검색 결과")
 
         search_btn.click(search_only, inputs=[search_input, top_k_search], outputs=[search_output])
-        search_input.submit(search_only, inputs=[search_input, top_k_search], outputs=[search_output])
+        search_input.submit(
+            search_only, inputs=[search_input, top_k_search], outputs=[search_output]
+        )
+
+    with gr.Tab("📁 파일 업로드"):
+        gr.Markdown("문서를 업로드하면 자동으로 임베딩 생성 후 검색 가능해집니다.")
+        upload_input = gr.File(
+            label="파일 선택",
+            file_types=[".txt", ".md", ".pdf"],
+        )
+        upload_btn = gr.Button("📤 업로드 & 인제스천", variant="primary")
+        upload_output = gr.Markdown(label="결과")
+
+        upload_btn.click(upload_file, inputs=[upload_input], outputs=[upload_output])
 
     with gr.Tab("ℹ️ 시스템 정보"):
         status_output = gr.Markdown(value=get_system_status())
