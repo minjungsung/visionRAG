@@ -10,7 +10,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Push wiki pages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
