@@ -74,7 +74,7 @@ jobs:
 
       - name: Upload metrics
         if: env.HAS_MINIO_SECRET == 'true' && always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: metrics
           path: reports/
