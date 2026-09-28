@@ -165,9 +165,7 @@ async def test_query_returns_answer_and_sources(client, mock_rag_module):
 async def test_query_passes_parameters(client, mock_rag_module):
     """POST /query passes query and top_k to RAGPipeline."""
     await client.post("/query", json={"query": "test query", "top_k": 3})
-    mock_rag_module.answer.assert_called_once_with(
-        "test query", top_k=3, query_type=None
-    )
+    mock_rag_module.answer.assert_called_once_with("test query", top_k=3, query_type=None)
 
 
 @pytest.mark.asyncio

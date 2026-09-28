@@ -24,9 +24,7 @@ class TritonPythonModel:
                 .flatten()[0]
                 .decode("utf-8")
             )
-            image_bytes = (
-                pb_utils.get_input_tensor_by_name(request, "image").as_numpy().tobytes()
-            )
+            image_bytes = pb_utils.get_input_tensor_by_name(request, "image").as_numpy().tobytes()
 
             content = [{"type": "text", "text": prompt}]
             images = []
@@ -39,9 +37,9 @@ class TritonPythonModel:
             text = self.processor.apply_chat_template(
                 messages, tokenize=False, add_generation_prompt=True
             )
-            inputs = self.processor(
-                text=[text], images=images or None, return_tensors="pt"
-            ).to(self.model.device)
+            inputs = self.processor(text=[text], images=images or None, return_tensors="pt").to(
+                self.model.device
+            )
             output_ids = self.model.generate(**inputs, max_new_tokens=512)
             result = self.processor.batch_decode(
                 output_ids[:, inputs.input_ids.shape[1] :], skip_special_tokens=True

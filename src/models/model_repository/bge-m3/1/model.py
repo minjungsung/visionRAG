@@ -14,13 +14,9 @@ class TritonPythonModel:
         for request in requests:
             texts = [
                 t.decode("utf-8")
-                for t in pb_utils.get_input_tensor_by_name(request, "text")
-                .as_numpy()
-                .flatten()
+                for t in pb_utils.get_input_tensor_by_name(request, "text").as_numpy().flatten()
             ]
-            embeddings = self.model.encode(texts, normalize_embeddings=True).astype(
-                np.float32
-            )
+            embeddings = self.model.encode(texts, normalize_embeddings=True).astype(np.float32)
             out = pb_utils.Tensor("embedding", embeddings)
             responses.append(pb_utils.InferenceResponse([out]))
         return responses
