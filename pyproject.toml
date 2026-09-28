@@ -27,7 +27,7 @@ gpu = [
 ocr = [
     "unstructured[pdf]>=0.15",
     "paddleocr>=2.8",
-    "transformers>=4.45",
+    "transformers>=5.17.0",
 ]
 mlops = [
     "langsmith>=0.1.99",
