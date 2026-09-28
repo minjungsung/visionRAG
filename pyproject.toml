@@ -9,7 +9,7 @@ dependencies = [
     "sentence-transformers>=3.0",
     "pillow>=10.4",
     "python-multipart>=0.0.9",
-    "minio>=7.2",
+    "minio>=7.2.20",
     "pydantic-settings>=2.4",
     "prometheus-client>=0.21",
 ]
