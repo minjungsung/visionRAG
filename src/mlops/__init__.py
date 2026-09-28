@@ -74,7 +74,9 @@ def trace_generation(query: str, context: str, answer: str, latency_ms: float) -
     )
 
 
-def trace_rag_pipeline(query: str, results: list[dict], answer: str, timings: dict) -> None:
+def trace_rag_pipeline(
+    query: str, results: list[dict], answer: str, timings: dict
+) -> None:
     """Log a full RAG pipeline run as a parent trace."""
     client = get_langsmith_client()
     if client is None:

@@ -21,7 +21,9 @@ def validate_embeddings(
         OutlierSampleDetection,
     )
 
-    df = pd.DataFrame(embeddings, columns=[f"dim_{i}" for i in range(embeddings.shape[1])])
+    df = pd.DataFrame(
+        embeddings, columns=[f"dim_{i}" for i in range(embeddings.shape[1])]
+    )
     if labels:
         df["label"] = labels
 

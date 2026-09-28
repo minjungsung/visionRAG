@@ -120,7 +120,9 @@ class TestQueryRewriterWithLLM:
 
     @patch("src.retrieval.query_rewriter.QueryRewriter._call_llm")
     def test_hyde_with_llm(self, mock_llm):
-        mock_llm.return_value = "Milvus는 HNSW 알고리즘을 사용하여 근사 최근접 이웃 검색을 수행합니다."
+        mock_llm.return_value = (
+            "Milvus는 HNSW 알고리즘을 사용하여 근사 최근접 이웃 검색을 수행합니다."
+        )
         result = self.rewriter.hyde("Milvus 검색 원리")
         mock_llm.assert_called_once()
         assert "HNSW" in result

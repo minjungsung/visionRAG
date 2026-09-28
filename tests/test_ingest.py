@@ -74,7 +74,9 @@ async def test_ingest_calls_pipeline_with_content(client):
                 files={"file": ("document.txt", file_content, "text/plain")},
             )
 
-    mock_pipeline_instance.ingest_file.assert_called_once_with("document.txt", file_content)
+    mock_pipeline_instance.ingest_file.assert_called_once_with(
+        "document.txt", file_content
+    )
 
 
 @pytest.mark.asyncio
@@ -168,7 +170,9 @@ async def test_ingest_async_passes_hex_content(client):
             files={"file": ("doc.pdf", file_content, "application/pdf")},
         )
 
-    mock_tasks_module.ingest_document.delay.assert_called_once_with("doc.pdf", file_content.hex())
+    mock_tasks_module.ingest_document.delay.assert_called_once_with(
+        "doc.pdf", file_content.hex()
+    )
 
 
 # --- Task Status Tests ---
