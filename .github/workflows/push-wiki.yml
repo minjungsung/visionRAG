@@ -22,7 +22,7 @@ jobs:
           git clone "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.wiki.git" "$TMPDIR" 2>/dev/null || {
             echo "Wiki not initialized. Please create the first page manually at:"
             echo "https://github.com/${{ github.repository }}/wiki/_new"
-            exit 1
+            exit 0
           }
           cp wiki/*.md "$TMPDIR/"
           cd "$TMPDIR"
