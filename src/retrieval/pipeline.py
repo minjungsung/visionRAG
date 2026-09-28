@@ -1,7 +1,6 @@
 """벡터 검색 파이프라인 (FAISS 기반)."""
 
 import logging
-import time
 
 from src.models.embedding import EmbeddingModel
 from src.vectorstore import VectorStore

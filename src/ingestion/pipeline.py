@@ -2,7 +2,6 @@
 
 import logging
 import uuid
-from pathlib import Path
 
 from src.models.embedding import EmbeddingModel
 from src.vectorstore import VectorStore

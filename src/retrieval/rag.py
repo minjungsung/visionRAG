@@ -72,6 +72,6 @@ class RAGPipeline:
                 logger.error(f"OpenAI failed: {e}")
 
         # OpenAI 없으면 검색 결과 요약
-        return f"[검색 결과 기반]\n\n" + "\n\n".join(
+        return "[검색 결과 기반]\n\n" + "\n\n".join(
             f"• {r['text'][:200]}" for r in self.retriever.search(query, top_k=3)
         )
