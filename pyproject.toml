@@ -30,7 +30,7 @@ ocr = [
     "transformers>=5.17.0",
 ]
 mlops = [
-    "langsmith>=0.1.99",
+    "langsmith>=0.14.1",
     "langchain-core>=1.6.5",
     "clearml>=1.16",
     "dvc[s3]>=3.55",
