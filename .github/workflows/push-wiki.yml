@@ -4,28 +4,34 @@ on:
     branches: [main]
     paths: ["wiki/**"]
   workflow_dispatch:
+permissions:
+  contents: read
+
 jobs:
+  verify-publication:
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/strict-project-validation.yml
   push-wiki:
+    needs: verify-publication
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
       - name: Push wiki pages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
         run: |
           if [ ! -d wiki ]; then echo "No wiki/ directory"; exit 0; fi
-          git config --global user.email "minjungsung1994@gmail.com"
-          git config --global user.name "minjungsung"
-          TMPDIR=$(mktemp -d)
-          git clone "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.wiki.git" "$TMPDIR" 2>/dev/null || {
-            echo "Wiki not initialized. Please create the first page manually at:"
-            echo "https://github.com/${{ github.repository }}/wiki/_new"
-            exit 0
-          }
-          cp wiki/*.md "$TMPDIR/"
-          cd "$TMPDIR"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          wiki_directory=$(mktemp -d)
+          git clone "https://x-access-token:${GITHUB_TOKEN}@github.com/${REPOSITORY}.wiki.git" "$wiki_directory"
+          cp wiki/*.md "$wiki_directory/"
+          cd "$wiki_directory"
           git add -A
           if git diff --cached --quiet; then
             echo "No changes to push"
