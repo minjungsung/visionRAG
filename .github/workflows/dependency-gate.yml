@@ -1,0 +1,33 @@
+name: Dependency Gate
+on:
+  pull_request:
+  push:
+    branches:
+      - "main"
+
+concurrency:
+  group: dependency-gate-${{ github.repository }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-dependencies:
+    permissions:
+      contents: read
+    uses: minjungsung/.github/.github/workflows/dependency-validation.yml@53eef31813cadd2611ade5062449c5089bbe1774
+    with:
+      pr-author: ${{ github.event.pull_request.user.login || 'policy-push' }}
+      projects-json: '[{"name":"root-python-pyproject","ecosystem":"python-pyproject","path":".","runtime-version":"3.12","manifest":"pyproject.toml","install-command":"python3 -m venv --clear .dependency-gate-venv && .dependency-gate-venv/bin/python -m pip install \".[dev,mlops]\"","test-command":".dependency-gate-venv/bin/python -m pytest tests/ -v --tb=short","timeout-minutes":15},{"name":"root-python-requirements","ecosystem":"python-requirements","path":".","runtime-version":"3.12","manifest":"requirements.txt","install-command":"python3 -m venv --clear .dependency-gate-venv && .dependency-gate-venv/bin/python -m pip install -r requirements.txt && .dependency-gate-venv/bin/python -m pip install \".[dev,mlops]\"","test-command":".dependency-gate-venv/bin/python -m pytest tests/ -v --tb=short","timeout-minutes":15},{"name":"spaces-python-requirements","ecosystem":"python-requirements","path":"spaces","runtime-version":"3.12","manifest":"requirements.txt","timeout-minutes":15}]'
+      policy-ref: 53eef31813cadd2611ade5062449c5089bbe1774
+
+  dependency-gate:
+    name: dependency-gate
+    if: always()
+    needs: validate-dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require dependency validation success
+        env:
+          VALIDATION_RESULT: ${{ needs.validate-dependencies.result }}
+        run: test "$VALIDATION_RESULT" = success
+
