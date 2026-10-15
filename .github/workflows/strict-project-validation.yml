@@ -10,6 +10,8 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: ${{ matrix.project.timeout-minutes }}
+    env:
+      PIP_NO_CACHE_DIR: '1'
     strategy:
       fail-fast: false
       matrix:
