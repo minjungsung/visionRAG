@@ -13,11 +13,11 @@ jobs:
   validate-dependencies:
     permissions:
       contents: read
-    uses: minjungsung/.github/.github/workflows/dependency-validation.yml@c81312af394463ad9ab38197cc9dc8c847b8ccda
+    uses: minjungsung/.github/.github/workflows/dependency-validation.yml@344b8013edd2afe9fb289e9391e3e6dea4bf2f52
     with:
       pr-author: dependabot[bot]
       projects-json: '[{"name":"root-python-pyproject","ecosystem":"python-pyproject","path":".","runtime-version":"3.12","manifest":"pyproject.toml","install-command":"python3 -m venv --clear .dependency-gate-venv && .dependency-gate-venv/bin/python -m pip install \".[dev,mlops]\"","test-command":".dependency-gate-venv/bin/python -m pytest tests/ -v --tb=short","timeout-minutes":15},{"name":"root-python-requirements","ecosystem":"python-requirements","path":".","runtime-version":"3.12","manifest":"requirements.txt","install-command":"python3 -m venv --clear .dependency-gate-venv && .dependency-gate-venv/bin/python -m pip install -r requirements.txt && .dependency-gate-venv/bin/python -m pip install \".[dev,mlops]\"","test-command":".dependency-gate-venv/bin/python -m pytest tests/ -v --tb=short","timeout-minutes":15},{"name":"spaces-python-requirements","ecosystem":"python-requirements","path":"spaces","runtime-version":"3.12","manifest":"requirements.txt","timeout-minutes":15}]'
-      policy-ref: c81312af394463ad9ab38197cc9dc8c847b8ccda
+      policy-ref: 344b8013edd2afe9fb289e9391e3e6dea4bf2f52
 
   dependency-gate:
     name: dependency-gate
