@@ -17,7 +17,7 @@ jobs:
       matrix:
         project: [{"name":"root-python-pyproject","ecosystem":"python-pyproject","path":".","runtime-version":"3.12","manifest":"pyproject.toml","install-command":"python3 -m venv --clear .dependency-gate-venv && .dependency-gate-venv/bin/python -m pip install \".[dev,mlops]\"","test-command":".dependency-gate-venv/bin/python -m pytest tests/ -v --tb=short","timeout-minutes":15},{"name":"root-python-requirements","ecosystem":"python-requirements","path":".","runtime-version":"3.12","manifest":"requirements.txt","install-command":"python3 -m venv --clear .dependency-gate-venv && .dependency-gate-venv/bin/python -m pip install -r requirements.txt && .dependency-gate-venv/bin/python -m pip install \".[dev,mlops]\"","test-command":".dependency-gate-venv/bin/python -m pytest tests/ -v --tb=short","timeout-minutes":15},{"name":"spaces-python-requirements","ecosystem":"python-requirements","path":"spaces","runtime-version":"3.12","manifest":"requirements.txt","timeout-minutes":15}]
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
@@ -29,7 +29,7 @@ jobs:
         if: matrix.project.ecosystem == 'npm'
         with:
           node-version: ${{ matrix.project.runtime-version }}
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: minjungsung/.github
           ref: 53eef31813cadd2611ade5062449c5089bbe1774
