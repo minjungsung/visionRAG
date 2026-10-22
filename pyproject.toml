@@ -10,7 +10,7 @@ dependencies = [
     "pillow>=12.3.0",
     "python-multipart>=0.0.32",
     "minio>=7.2.20",
-    "pydantic-settings>=2.15.0",
+    "pydantic-settings>=2.16.0",
     "prometheus-client>=0.26.0",
 ]
 
