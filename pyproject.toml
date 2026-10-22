@@ -39,7 +39,7 @@ mlops = [
 eval = [
     "ragas>=0.4.3",
     "datasets>=5.1.0",
-    "langchain-openai>=1.6.7",
+    "langchain-openai>=1.7.2",
 ]
 
 [tool.ruff]
