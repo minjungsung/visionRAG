@@ -13,7 +13,7 @@ jobs:
   lint-and-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
 
       - uses: actions/setup-python@v7
         with:
@@ -45,7 +45,7 @@ jobs:
           echo "::notice::Skipping DVC repro — MINIO_ACCESS_KEY secret not configured"
           exit 0
 
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
         if: env.HAS_MINIO_SECRET == 'true'
 
       - uses: actions/setup-python@v7
@@ -83,7 +83,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: lint-and-test
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
 
       - name: Build API image
         run: docker build -t visionrag-api:${{ github.sha }} -f docker/Dockerfile .
